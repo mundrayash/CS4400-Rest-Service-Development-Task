@@ -7,6 +7,7 @@ from threading import Thread
 BUFFER_SIZE=1024
 
 import requests
+import time
 
 commit_list = []
 results=[]
@@ -15,8 +16,11 @@ def run():
 	port=8001
 	max_conn=15
 	BUFFER_SIZE=1024
-	
-	
+    
+	notDone= True
+	start = time.time()
+	print("Start Time", start)
+    
 	#SETUP
 	serverSocket = socket(AF_INET,SOCK_STREAM)
 	serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -26,9 +30,8 @@ def run():
 	#WAIT FOR CONNECTION
 	print( 'The server is ready to listen \n')	  
 	
-	serverSocket.listen(max_conn)
-	while True:	
-		
+	
+	while notDone:
 	#ACCEPT CONNECTION
 		try:
 				  
