@@ -13,7 +13,7 @@ commit_list = []
 results=[]
 def run():
 	nxt =0
-	port=8001
+	port=9000
 	max_conn=15
 	BUFFER_SIZE=1024
     
@@ -32,6 +32,7 @@ def run():
 	
 	
 	while notDone:
+		serverSocket.listen(max_conn)
 	#ACCEPT CONNECTION
 		try:
 				  
@@ -49,28 +50,41 @@ def run():
 			sys.exit(1) 
 	
 		nxt=nxt+1
-		serverSocket.listen(max_conn)
+	serverSocket.listen(max_conn)
 
 def msg_decode(conn,addr,nxt):
+	#decodes message from worker and checks if they are asking for more work 
 	ans=conn.recv(BUFFER_SIZE).decode()
 	if "READY" in ans:
-		print("recieved ready sending more work")
+		print("Sending more work")
 		new_worker(conn,addr,nxt)
-		recive_data(conn,addr,nxt)
+		#recive_data(conn,addr,nxt)
 		conn.close()
+	elif "Complexity" in ans:
+		splitMessage = ans.split('\n')
+		msg = splitMessage[0].split(':')[1].strip()
+		print(msg)
+		results.append(msg)
 	else:
 		print("error")
 		sys.exit()
 		
 def new_worker(conn,addr,nxt):
-	print("sending ", commit_list[nxt])
-	conn.send(commit_list[nxt].encode())
+	if nxt>len(commit_list)-1: 
+		print("done")
+		msg="DONE"
+		conn.send(msg.encode())
+		end = time.time()
+		print("End Time ",end)
+		#exit loop and close socket
+		notDone=False 
+				
+	else:
+		print("sending ", commit_list[nxt])	
+		conn.send(commit_list[nxt].encode())
+		#recive reply
+		msg_decode(conn,addr,nxt)	
 	
-def recive_data(conn,addr,nxt):
-	ans=conn.recv(BUFFER_SIZE).decode()
-	ans=float(ans)
-	print("recieved", ans)
-	results.append(ans)
 	
 def laod_commits():
 	token='411243e1cd58733f3356d387bb1e9475240b8bb9'

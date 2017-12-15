@@ -1,12 +1,15 @@
 from socket import *
-
+import radon
+from radon.cli import Config
+from radon.complexity import SCORE
+from radon.cli.harvest import CCHarvester
 import sys
 import os
 import os.path
 import time
 import requests
 import json
-
+import shutil
 import threading
 from threading import Thread
 from git import Repo
@@ -14,30 +17,23 @@ from pprint import pprint
 from re import match
 BUFFER_SIZE=1024
 
-
-
+workernum= int(sys.argv[1])
+commitdir='./commit' + str(workernum) +'/'
 def run():
-	
 	while True:
 		clientSocket=socket(AF_INET,SOCK_STREAM)
-		clientSocket.connect((gethostbyname(gethostname()),8001))
+		clientSocket.connect((gethostbyname(gethostname()),9000))
 		#send request
 		msg ="READY"
 		clientSocket.send(msg.encode())
-		
 		reply=clientSocket.recv(BUFFER_SIZE).decode()
-			
-		
 		if "DONE" in reply:
 			print("bye!")
-			conn.close()
+			clientSocket.close()
 			sys.exit()
 		else:	
 			do_work(reply,clientSocket)
-			
-			
-		#reply=clientSocket.recv(BUFFER_SIZE).decode()
-		
+					
 def do_work(reply,conn):
 	sha=reply
 	blob_urls = []
@@ -58,21 +54,51 @@ def do_work(reply,conn):
 			blob_urls.append(item['url'])
 	
 	payload = {'access_token': token}
-	headers = {'Accept': 'application/vnd.github.v3.raw+json'} #gets the raw text?
+	headers = {'Accept': 'application/vnd.github.v3.raw+json'} 
 	
+	# the files that we want to go through
 	for i, url in enumerate(blob_urls):
 		repo = requests.get(url, params=payload, headers=headers)
-		files.append(repo.text)		
-		#files[i]=repo.text
-		cc.append(len(files[i]))
-		#print(cc[i])
+		filename= commitdir+ '{}.py'.format(i)
+		with open(filename, 'w') as f:
+			files.append(filename) #list holding all the file names
+			f.write(repo.text)
 	avg=getavg(cc)
-	msg=str(avg) + ' '
-	
+	shutil.rmtree(commitdir)
+	if avg!=None:
+		msg="Complexity: " + str(avg) 
+	else:
+		msg="Done"
 	conn.send(msg.encode())
-	
-def getavg(cc):
-	return sum(cc)/len(cc)
-	
+
+def getCC(files):
+	# found it on the internet
+	config = Config(
+			exclude="",
+			ignore="",
+			order=SCORE,
+			no_assert=True,
+			show_complexity=True,
+			average=True,
+			total_average=True,
+			show_closures=True,
+			min='A',
+			max='F'
+			)
+	commit_complexity=0
+	numfiles=0
+	for i ,item in enumerate(files):
+		f = open(files[i], 'r')
+		results = CCHarvester(files[i], config).gobble(f)
+		numfiles +=1
+		total_cc = 0
+		for result in results:
+			commit_complexity += int(result.complexity)
+				
+	if numfiles !=0:	
+		return commit_complexity / numfiles
+	else:
+		# to avoid dividing by zero
+	 	return None 
 if __name__ == "__main__":
 	run()
