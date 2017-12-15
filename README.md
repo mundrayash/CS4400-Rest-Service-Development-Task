@@ -10,5 +10,5 @@ Result: The time to calculate the cyclomatic complexity was computed with differ
 
 To start the program run the run.sh script.
 
-
+![chart](https://user-images.githubusercontent.com/26023034/34056455-fa9df932-e1ca-11e7-9f2e-fd201b85c372.png)
 
